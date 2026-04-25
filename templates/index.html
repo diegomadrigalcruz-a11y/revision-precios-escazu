@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Revisión de Precios — Art. 107 RLGCP</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -32,6 +33,10 @@
     padding: 20px 28px;
     border-radius: 10px;
     margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
   }
   header h1 { font-size: 1.25rem; font-weight: 700; }
   header p  { font-size: 0.82rem; opacity: 0.8; margin-top: 4px; }
@@ -118,6 +123,25 @@
   .btn:hover { background: var(--azul2); }
   .btn:disabled { background: var(--sub); cursor: not-allowed; }
 
+  /* Botón PDF */
+  .btn-pdf {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: #fff;
+    color: var(--azul);
+    border: 1.5px solid var(--azul);
+    border-radius: 7px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-pdf:hover { background: var(--azul); color: #fff; }
+
   /* Resultados */
   .resultado-vacio {
     display: flex;
@@ -144,8 +168,8 @@
   }
   .kpi .label { font-size: 0.72rem; color: var(--sub); font-weight: 600; text-transform: uppercase; }
   .kpi .valor { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
-  .kpi.procede   { border-color: var(--verde); background: #f0fdf4; }
-  .kpi.no-procede { border-color: var(--rojo); background: #fef2f2; }
+  .kpi.procede    { border-color: var(--verde); background: #f0fdf4; }
+  .kpi.no-procede { border-color: var(--rojo);  background: #fef2f2; }
 
   .formula-box {
     background: #f8fafc;
@@ -211,9 +235,49 @@
   .alerta.error { background: #fee2e2; color: var(--rojo); border: 1px solid #fca5a5; }
   .alerta.info  { background: #eff6ff; color: var(--azul); border: 1px solid #bfdbfe; }
 
+  /* Gráfico de radar */
+  .radar-section {
+    margin-top: 24px;
+    display: none;
+    background: #f8fafc;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .radar-titulo {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--sub);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--borde);
+  }
+  .radar-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+  .radar-leyenda {
+    font-size: 0.78rem;
+    color: var(--sub);
+    line-height: 1.8;
+  }
+  .radar-leyenda .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .radar-leyenda strong { color: var(--texto); }
+
   @media (max-width: 780px) {
     .layout { grid-template-columns: 1fr; }
     .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .radar-layout { grid-template-columns: 1fr; }
   }
 
   /* ── Respaldo Normativo ── */
@@ -250,10 +314,7 @@
     letter-spacing: .05em;
     text-transform: uppercase;
   }
-  .norma-header .chevron {
-    font-size: 0.8rem;
-    transition: transform .25s;
-  }
+  .norma-header .chevron { font-size: 0.8rem; transition: transform .25s; }
   .norma-header.open .chevron { transform: rotate(180deg); }
 
   .norma-body {
@@ -278,9 +339,9 @@
     padding: 14px 16px;
     border-left: 4px solid var(--azul);
   }
-  .ley-card .ley-num { font-size: 0.7rem; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: .05em; }
+  .ley-card .ley-num   { font-size: 0.7rem; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: .05em; }
   .ley-card .ley-nombre { font-size: 0.85rem; font-weight: 600; color: var(--texto); margin: 4px 0 2px; }
-  .ley-card .ley-desc { font-size: 0.75rem; color: var(--sub); line-height: 1.5; }
+  .ley-card .ley-desc  { font-size: 0.75rem; color: var(--sub); line-height: 1.5; }
 
   .norma-subtitulo {
     font-size: 0.75rem;
@@ -292,7 +353,6 @@
     padding-bottom: 6px;
     border-bottom: 1px solid var(--borde);
   }
-
   .norma-tabla {
     width: 100%;
     border-collapse: collapse;
@@ -329,7 +389,6 @@
     font-weight: 700;
     white-space: nowrap;
   }
-
   .norma-nota {
     background: #f0fdf4;
     border: 1px solid #86efac;
@@ -343,7 +402,6 @@
     margin-top: 4px;
   }
   .norma-nota .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
-
   .bccr-badge {
     display: inline-flex;
     align-items: center;
@@ -359,19 +417,92 @@
   }
   .bccr-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--verde); animation: pulse 1.5s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── IMPRESIÓN / PDF ── */
+  @media print {
+    body { background: #fff; padding: 0; font-size: 11pt; }
+
+    .no-print { display: none !important; }
+
+    header {
+      background: #1a4f8a !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .btn-pdf { display: none !important; }
+
+    /* Ocultar formulario, mostrar solo resultados */
+    #panel-form { display: none !important; }
+    .layout {
+      grid-template-columns: 1fr !important;
+      max-width: 100%;
+    }
+
+    /* Encabezado PDF extra */
+    .print-header {
+      display: block !important;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 9pt;
+      color: #64748b;
+      background: #f8fafc;
+    }
+    .print-header .print-row { display: flex; gap: 24px; flex-wrap: wrap; }
+    .print-header .print-item strong { color: #1e293b; display: block; }
+
+    .card { border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: none; }
+
+    table { font-size: 9pt; }
+    th { background: #1a4f8a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; }
+    .kpi { border: 1px solid #cbd5e1 !important; }
+    .kpi.procede { background: #f0fdf4 !important; border-color: #16a34a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .kpi.no-procede { background: #fef2f2 !important; border-color: #dc2626 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .radar-section { display: block !important; page-break-inside: avoid; }
+    .radar-layout { grid-template-columns: 1fr 1fr !important; }
+
+    .norma-section { margin-top: 16px; }
+    .norma-header { background: #0f2d52 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; border-radius: 6px 6px 0 0; }
+    .norma-body { display: block !important; }
+    .norma-header .chevron { display: none; }
+
+    .badge.verde { background: #dcfce7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge.rojo  { background: #fee2e2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    @page { margin: 1.5cm 1.5cm 2cm; size: A4; }
+  }
+
+  /* El print-header es invisible en pantalla */
+  .print-header { display: none; }
 </style>
 </head>
 <body>
 
 <div style="max-width:1100px;margin:0 auto;">
   <header>
-    <h1>Revisión de Precios — Contrato de Servicios / Suministros</h1>
-    <p>Arts. 102, 107, 108 y 109 RLGCP (Decreto N°43808-H) · Índices oficiales BCCR en tiempo real</p>
+    <div>
+      <h1>Revisión de Precios — Contrato de Servicios / Suministros</h1>
+      <p>Arts. 102, 107, 108 y 109 RLGCP (Decreto N°43808-H) · Índices oficiales BCCR en tiempo real</p>
+    </div>
+    <button class="btn-pdf" id="btnPdf" onclick="exportarPDF()">
+      ↓ Exportar PDF
+    </button>
   </header>
+
+  <!-- Solo visible en impresión -->
+  <div class="print-header" id="printHeader">
+    <div class="print-row" id="printDatos"></div>
+  </div>
 
   <div class="layout">
     <!-- Panel izquierdo: formulario -->
-    <div>
+    <div id="panel-form">
       <div class="card">
         <h2>Datos del Contrato</h2>
 
@@ -484,6 +615,15 @@
             </thead>
             <tbody id="tabla-indices"></tbody>
           </table>
+
+          <!-- Gráfico de radar -->
+          <div class="radar-section" id="radar-section">
+            <div class="radar-titulo">Composición del precio — Cotización vs. Variación ajustada</div>
+            <div class="radar-layout">
+              <canvas id="radarChart"></canvas>
+              <div class="radar-leyenda" id="radar-leyenda"></div>
+            </div>
+          </div>
 
           <div style="margin-top:16px; padding:12px; background:var(--gris); border-radius:6px; font-size:0.8rem; color:var(--sub)">
             <strong>Interpretación (Art. 107 RLGCP):</strong>
@@ -619,10 +759,9 @@ function toggleNorma(el) {
 </script>
 
 <script>
-const fmt = n => '₡' + Number(n).toLocaleString('es-CR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmt  = n => '₡' + Number(n).toLocaleString('es-CR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const fmtN = n => Number(n).toLocaleString('es-CR', {minimumFractionDigits: 4, maximumFractionDigits: 6});
 
-// Generar períodos desde 2020-01 hasta hoy
 function generarPeriodos() {
   const ahora = new Date();
   const periodos = [];
@@ -646,7 +785,6 @@ function poblarSelects() {
       sel.appendChild(opt);
     });
   });
-  // Defaults: cotización = 12 meses atrás, variación = mes más reciente
   document.getElementById('periodo_cot').value = ps[12] || ps[ps.length-1];
   document.getElementById('periodo_var').value = ps[1] || ps[0];
 }
@@ -654,13 +792,126 @@ function poblarSelects() {
 function actualizarTotal() {
   const vals = ['mo','ins','ga','util'].map(id => parseFloat(document.getElementById(id).value) || 0);
   const total = vals.reduce((a,b) => a+b, 0);
-  const el = document.getElementById('total-pct-valor');
-  const st = document.getElementById('total-pct-estado');
-  el.textContent = total.toFixed(2);
+  document.getElementById('total-pct-valor').textContent = total.toFixed(2);
   const ok = Math.abs(total - 100) < 0.01;
+  const st = document.getElementById('total-pct-estado');
   st.className = ok ? 'ok' : 'err';
   st.textContent = ok ? '✓ Correcto' : 'Debe sumar 100%';
   document.getElementById('btnCalcular').disabled = !ok;
+}
+
+// Gráfico de radar
+let radarInst = null;
+
+function renderRadar(data) {
+  const f   = data.factores;
+  const idx = data.indices;
+  const mo  = parseFloat(document.getElementById('mo').value);
+  const ins = parseFloat(document.getElementById('ins').value);
+  const ga  = parseFloat(document.getElementById('ga').value);
+  const ut  = parseFloat(document.getElementById('util').value) || 0;
+
+  const cotizacion = [mo, ins, ga, ut];
+  const variacion  = [
+    parseFloat((f.mo  * 100).toFixed(4)),
+    parseFloat((f.ins * 100).toFixed(4)),
+    parseFloat((f.ga  * 100).toFixed(4)),
+    parseFloat((f.u   * 100).toFixed(4)),
+  ];
+
+  const ratios = [
+    idx.mano_de_obra.ratio,
+    idx.insumos.ratio,
+    idx.gastos_administrativos.ratio,
+    1,
+  ];
+
+  // Leyenda dinámica
+  const nombres = ['Mano de obra', 'Insumos', 'Gastos adm.', 'Utilidad'];
+  document.getElementById('radar-leyenda').innerHTML = `
+    <div style="margin-bottom:12px">
+      <span class="dot" style="background:#1a4f8a"></span>
+      <strong>Cotización (base)</strong>
+    </div>
+    <div style="margin-bottom:16px">
+      <span class="dot" style="background:#f59e0b"></span>
+      <strong>Variación ajustada</strong>
+    </div>
+    <div style="border-top:1px solid #e2e8f0; padding-top:12px; display:flex; flex-direction:column; gap:8px;">
+      ${nombres.map((n,i) => `
+        <div>
+          <strong>${n}</strong><br>
+          Cotiz.: <strong>${cotizacion[i].toFixed(2)}%</strong> →
+          Ajust.: <strong>${variacion[i].toFixed(4)}%</strong>
+          ${i < 3 ? `<span style="color:${ratios[i]>1?'#16a34a':'#dc2626'}"> (ratio ${ratios[i].toFixed(4)})</span>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  if (radarInst) radarInst.destroy();
+
+  radarInst = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Mano\nde obra', 'Insumos', 'Gastos\nadm.', 'Utilidad'],
+      datasets: [
+        {
+          label: 'Cotización (base)',
+          data: cotizacion,
+          backgroundColor: 'rgba(26,79,138,0.12)',
+          borderColor: '#1a4f8a',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#1a4f8a',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+        {
+          label: 'Variación ajustada',
+          data: variacion,
+          backgroundColor: 'rgba(245,158,11,0.12)',
+          borderColor: '#f59e0b',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#f59e0b',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderDash: [5, 4],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(4)}%`
+          }
+        }
+      },
+      scales: {
+        r: {
+          min: 0,
+          ticks: {
+            stepSize: Math.ceil(Math.max(...cotizacion) / 4),
+            font: { size: 10 },
+            color: '#94a3b8',
+            backdropColor: 'transparent',
+            callback: v => v + '%',
+          },
+          grid: { color: 'rgba(0,0,0,0.08)' },
+          pointLabels: {
+            font: { size: 12, weight: '600' },
+            color: '#334155',
+          },
+          angleLines: { color: 'rgba(0,0,0,0.1)' },
+        },
+      },
+    },
+  });
+
+  document.getElementById('radar-section').style.display = 'block';
 }
 
 async function calcular() {
@@ -678,6 +929,7 @@ async function calcular() {
   document.getElementById('vacio').style.display = 'none';
   document.getElementById('resultado').style.display = 'none';
   document.getElementById('loader').style.display = 'block';
+  document.getElementById('btnPdf').style.display = 'none';
 
   try {
     const resp = await fetch('/api/calcular', {
@@ -707,7 +959,7 @@ async function calcular() {
     // KPIs
     document.getElementById('r-pc').textContent = fmt(data.precio_cotizacion);
     document.getElementById('r-pv').textContent = fmt(data.precio_variado);
-    document.getElementById('r-pv').style.color  = data.variacion_absoluta >= 0 ? 'var(--verde)' : 'var(--rojo)';
+    document.getElementById('r-pv').style.color = data.variacion_absoluta >= 0 ? 'var(--verde)' : 'var(--rojo)';
 
     const varPct = data.variacion_porcentual;
     document.getElementById('r-var').textContent = (varPct >= 0 ? '+' : '') + varPct.toFixed(2) + '%';
@@ -716,7 +968,7 @@ async function calcular() {
     kpi.className = 'kpi ' + (data.procede ? 'procede' : 'no-procede');
     document.getElementById('r-var').style.color = data.procede ? 'var(--verde)' : 'var(--rojo)';
 
-    // Fórmula desarrollo
+    // Fórmula
     const f = data.factores;
     const idx = data.indices;
     document.getElementById('formula-desarrollo').innerHTML = `
@@ -732,7 +984,7 @@ async function calcular() {
       <div class="linea">Pv = <span class="resalt">${fmt(data.precio_variado)}</span></div>
     `;
 
-    // Tabla de índices
+    // Tabla
     const filas = [
       ['Mano de obra', idx.mano_de_obra],
       ['Insumos (IPP-S)', idx.insumos],
@@ -760,12 +1012,34 @@ async function calcular() {
       ? ` La variación de <strong>${varPct.toFixed(2)}%</strong> supera el umbral mínimo del 5% establecido en el Art. 107 RLGCP. <span class="badge verde">Revisión procedente</span>`
       : ` La variación de <strong>${varPct.toFixed(2)}%</strong> no alcanza el umbral mínimo del 5% (Art. 107 RLGCP). <span class="badge rojo">Revisión no procede en este período</span>`;
 
+    // Radar
+    renderRadar(data);
+
+    // Datos para encabezado PDF
+    const ahora = new Date().toLocaleDateString('es-CR', {day:'2-digit', month:'long', year:'numeric'});
+    document.getElementById('printDatos').innerHTML = `
+      <div class="print-item"><strong>Precio cotización</strong>${fmt(data.precio_cotizacion)}</div>
+      <div class="print-item"><strong>Período cotización</strong>${pCot}</div>
+      <div class="print-item"><strong>Período variación</strong>${pVar}</div>
+      <div class="print-item"><strong>Precio variado</strong>${fmt(data.precio_variado)}</div>
+      <div class="print-item"><strong>Variación</strong>${(varPct >= 0 ? '+' : '') + varPct.toFixed(2)}%</div>
+      <div class="print-item"><strong>Fecha de cálculo</strong>${ahora}</div>
+    `;
+
+    // Mostrar botón PDF
+    const btnPdf = document.getElementById('btnPdf');
+    btnPdf.style.display = 'inline-flex';
+
   } catch (e) {
     document.getElementById('loader').style.display = 'none';
     document.getElementById('resultado').style.display = 'block';
     document.getElementById('alerta-resultado').innerHTML =
       `<div class="alerta error">Error de conexión: ${e.message}</div>`;
   }
+}
+
+function exportarPDF() {
+  window.print();
 }
 
 actualizarTotal();
