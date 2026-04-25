@@ -1,12 +1,19 @@
 from flask import Flask, render_template, request, jsonify
 import warnings
 warnings.filterwarnings('ignore')
-from bccr import SW
+import os
+import requests
 import pandas as pd
-from datetime import datetime, date
+from bs4 import BeautifulSoup
+from datetime import datetime
 import traceback
 
 app = Flask(__name__)
+
+BCCR_URL = 'https://gee.bccr.fi.cr/Indicadores/Suscripciones/WS/wsindicadoreseconomicos.asmx/ObtenerIndicadoresEconomicos'
+BCCR_TOKEN  = os.environ.get('BCCR_TOKEN',  '5CMRCBTHMT')
+BCCR_CORREO = os.environ.get('BCCR_CORREO', 'paquete.bccr.python@outlook.com')
+BCCR_NOMBRE = os.environ.get('BCCR_NOMBRE', 'Paquete BCCR Python')
 
 INDICES = {
     'ismn':  {'codigo': 1076,  'nombre': 'Índice de Salarios Mínimos Nominales (ISMN, 1984=100)'},
@@ -16,16 +23,49 @@ INDICES = {
 }
 
 
-def fecha_bccr(fecha_str: str) -> str:
-    """Convierte YYYY-MM a dd/mm/yyyy (primer día del mes)."""
-    dt = datetime.strptime(fecha_str, '%Y-%m')
-    return dt.strftime('01/%m/%Y')
+def bccr_datos(codigo: int, inicio: str, fin: str) -> pd.DataFrame:
+    """
+    Consulta directa al WS del BCCR.
+    inicio / fin: 'dd/mm/yyyy'
+    Retorna DataFrame con índice datetime y columna 'valor'.
+    """
+    params = {
+        'Indicador':       codigo,
+        'FechaInicio':     inicio,
+        'FechaFinal':      fin,
+        'SubNiveles':      'N',
+        'Nombre':          BCCR_NOMBRE,
+        'CorreoElectronico': BCCR_CORREO,
+        'Token':           BCCR_TOKEN,
+    }
+    resp = requests.get(BCCR_URL, params=params, timeout=30)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, 'lxml-xml')
+    registros = soup.find_all('INGC011_CAT_INDICADORECONOMIC')
+    if not registros:
+        return pd.DataFrame()
+    filas = []
+    for r in registros:
+        fecha_tag = r.find('DES_FECHA')
+        valor_tag = r.find('NUM_VALOR')
+        if fecha_tag and valor_tag:
+            try:
+                fecha = datetime.strptime(fecha_tag.text.strip()[:10], '%Y-%m-%d')
+                valor = float(valor_tag.text.strip())
+                filas.append({'fecha': fecha, 'valor': valor})
+            except Exception:
+                continue
+    if not filas:
+        return pd.DataFrame()
+    df = pd.DataFrame(filas).set_index('fecha')
+    df.index = pd.to_datetime(df.index)
+    return df
 
 
 def obtener_valor_indice(codigo: int, periodo: str) -> tuple[float, str] | tuple[None, None]:
     """
     Retorna (valor, periodo_real). Si el período exacto no tiene dato (p.ej. ISMN
-    solo publica en enero y julio), usa el valor publicado más reciente anterior al período.
+    solo publica en enero y julio), usa el valor publicado más reciente anterior.
     Busca hasta 12 meses atrás.
     """
     dt = datetime.strptime(periodo, '%Y-%m')
@@ -40,17 +80,15 @@ def obtener_valor_indice(codigo: int, periodo: str) -> tuple[float, str] | tuple
     inicio = f'01/{mes_i:02d}/{anio_i}'
     fin    = f'01/{mes_f:02d}/{anio_f}'
     try:
-        df = SW.datos(codigo, FechaInicio=inicio, FechaFinal=fin)
+        df = bccr_datos(codigo, inicio, fin)
         if df.empty:
             return None, None
-        df.index = pd.to_datetime(df.index.astype(str))
         target = pd.Timestamp(dt)
         disponibles = df[df.index <= target]
         if disponibles.empty:
             return None, None
-        fila = disponibles.iloc[-1]
         periodo_real = disponibles.index[-1].strftime('%Y-%m')
-        return float(fila.iloc[0]), periodo_real
+        return float(disponibles['valor'].iloc[-1]), periodo_real
     except Exception:
         return None, None
 
@@ -58,15 +96,14 @@ def obtener_valor_indice(codigo: int, periodo: str) -> tuple[float, str] | tuple
 def ultimos_periodos(codigo: int, n: int = 12) -> list[dict]:
     """Retorna los últimos n períodos disponibles para un indicador."""
     try:
-        df = SW.datos(codigo, FechaInicio='01/01/2023', FechaFinal='25/04/2026')
+        df = bccr_datos(codigo, '01/01/2023', '25/04/2026')
         if df.empty:
             return []
-        df.index = pd.to_datetime(df.index.astype(str))
         df = df.sort_index()
         resultado = []
         for idx in df.index[-n:]:
             periodo = idx.strftime('%Y-%m')
-            valor = float(df.loc[idx].iloc[0])
+            valor = float(df.loc[idx, 'valor'])
             resultado.append({'periodo': periodo, 'valor': round(valor, 6)})
         return resultado
     except Exception:
@@ -80,7 +117,6 @@ def index():
 
 @app.route('/api/indices', methods=['GET'])
 def api_indices():
-    """Lista de índices disponibles."""
     return jsonify([
         {'clave': k, 'nombre': v['nombre'], 'codigo': v['codigo']}
         for k, v in INDICES.items()
@@ -89,7 +125,6 @@ def api_indices():
 
 @app.route('/api/periodos/<indice>', methods=['GET'])
 def api_periodos(indice: str):
-    """Retorna los últimos períodos disponibles para un índice."""
     if indice not in INDICES:
         return jsonify({'error': 'Índice no encontrado'}), 404
     codigo = INDICES[indice]['codigo']
@@ -99,19 +134,6 @@ def api_periodos(indice: str):
 
 @app.route('/api/calcular', methods=['POST'])
 def api_calcular():
-    """
-    Cuerpo esperado:
-    {
-        "precio_cotizacion": 150000,
-        "mo": 0.45,   // porcentaje como decimal
-        "insumos": 0.20,
-        "ga": 0.25,
-        "utilidad": 0.10,
-        "indice_mo": "ismn",
-        "periodo_cotizacion": "2024-01",
-        "periodo_variacion": "2026-01"
-    }
-    """
     try:
         data = request.get_json()
         pc     = float(data['precio_cotizacion'])
@@ -201,6 +223,5 @@ def api_calcular():
 
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5050))
     app.run(debug=False, host='0.0.0.0', port=port)
