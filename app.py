@@ -22,20 +22,19 @@ def fecha_bccr(fecha_str: str) -> str:
     return dt.strftime('01/%m/%Y')
 
 
-def obtener_valor_indice(codigo: int, periodo: str) -> float | None:
+def obtener_valor_indice(codigo: int, periodo: str) -> tuple[float, str] | tuple[None, None]:
     """
-    periodo: 'YYYY-MM'
-    Retorna el valor del índice para ese mes o None si no existe.
-    SW.datos retorna vacío si FechaInicio==FechaFinal; se pide rango ±2 meses.
+    Retorna (valor, periodo_real). Si el período exacto no tiene dato (p.ej. ISMN
+    solo publica en enero y julio), usa el valor publicado más reciente anterior al período.
+    Busca hasta 12 meses atrás.
     """
     dt = datetime.strptime(periodo, '%Y-%m')
-    # rango: 2 meses antes hasta 2 meses después
-    anio_i, mes_i = dt.year, dt.month - 2
-    if mes_i <= 0:
+    anio_i, mes_i = dt.year, dt.month - 12
+    while mes_i <= 0:
         mes_i += 12
         anio_i -= 1
     anio_f, mes_f = dt.year, dt.month + 2
-    if mes_f > 12:
+    while mes_f > 12:
         mes_f -= 12
         anio_f += 1
     inicio = f'01/{mes_i:02d}/{anio_i}'
@@ -43,13 +42,17 @@ def obtener_valor_indice(codigo: int, periodo: str) -> float | None:
     try:
         df = SW.datos(codigo, FechaInicio=inicio, FechaFinal=fin)
         if df.empty:
-            return None
-        mask = df.index.astype(str) == periodo
-        if not mask.any():
-            return None
-        return float(df[mask].iloc[-1, 0])
+            return None, None
+        df.index = pd.to_datetime(df.index.astype(str))
+        target = pd.Timestamp(dt)
+        disponibles = df[df.index <= target]
+        if disponibles.empty:
+            return None, None
+        fila = disponibles.iloc[-1]
+        periodo_real = disponibles.index[-1].strftime('%Y-%m')
+        return float(fila.iloc[0]), periodo_real
     except Exception:
-        return None
+        return None, None
 
 
 def ultimos_periodos(codigo: int, n: int = 12) -> list[dict]:
@@ -127,16 +130,16 @@ def api_calcular():
         cod_ins = INDICES['ipp']['codigo']
         cod_ga  = INDICES['ipc']['codigo']
 
-        iMOtc = obtener_valor_indice(cod_mo, p_cot)
-        iMOtm = obtener_valor_indice(cod_mo, p_var)
-        iltc  = obtener_valor_indice(cod_ins, p_cot)
-        ilti  = obtener_valor_indice(cod_ins, p_var)
-        iGAtc = obtener_valor_indice(cod_ga, p_cot)
-        iGAtg = obtener_valor_indice(cod_ga, p_var)
+        iMOtc, rMOtc = obtener_valor_indice(cod_mo, p_cot)
+        iMOtm, rMOtm = obtener_valor_indice(cod_mo, p_var)
+        iltc,  rltc  = obtener_valor_indice(cod_ins, p_cot)
+        ilti,  rlti  = obtener_valor_indice(cod_ins, p_var)
+        iGAtc, rGAtc = obtener_valor_indice(cod_ga, p_cot)
+        iGAtg, rGAtg = obtener_valor_indice(cod_ga, p_var)
 
         errores = []
-        if iMOtc is None: errores.append(f'Sin dato de mano de obra para {p_cot}')
-        if iMOtm is None: errores.append(f'Sin dato de mano de obra para {p_var}')
+        if iMOtc is None: errores.append(f'Sin dato de mano de obra para {p_cot} (ni en los 12 meses anteriores)')
+        if iMOtm is None: errores.append(f'Sin dato de mano de obra para {p_var} (ni en los 12 meses anteriores)')
         if iltc  is None: errores.append(f'Sin dato de insumos para {p_cot}')
         if ilti  is None: errores.append(f'Sin dato de insumos para {p_var}')
         if iGAtc is None: errores.append(f'Sin dato de gastos adm. para {p_cot}')
@@ -165,20 +168,20 @@ def api_calcular():
             'indices': {
                 'mano_de_obra': {
                     'nombre': INDICES[ind_mo]['nombre'],
-                    'cotizacion': {'periodo': p_cot, 'valor': round(iMOtc, 6)},
-                    'variacion':  {'periodo': p_var, 'valor': round(iMOtm, 6)},
+                    'cotizacion': {'periodo': rMOtc, 'valor': round(iMOtc, 6)},
+                    'variacion':  {'periodo': rMOtm, 'valor': round(iMOtm, 6)},
                     'ratio': round(iMOtm / iMOtc, 6),
                 },
                 'insumos': {
                     'nombre': INDICES['ipp']['nombre'],
-                    'cotizacion': {'periodo': p_cot, 'valor': round(iltc, 6)},
-                    'variacion':  {'periodo': p_var, 'valor': round(ilti, 6)},
+                    'cotizacion': {'periodo': rltc, 'valor': round(iltc, 6)},
+                    'variacion':  {'periodo': rlti, 'valor': round(ilti, 6)},
                     'ratio': round(ilti / iltc, 6),
                 },
                 'gastos_administrativos': {
                     'nombre': INDICES['ipc']['nombre'],
-                    'cotizacion': {'periodo': p_cot, 'valor': round(iGAtc, 6)},
-                    'variacion':  {'periodo': p_var, 'valor': round(iGAtg, 6)},
+                    'cotizacion': {'periodo': rGAtc, 'valor': round(iGAtc, 6)},
+                    'variacion':  {'periodo': rGAtg, 'valor': round(iGAtg, 6)},
                     'ratio': round(iGAtg / iGAtc, 6),
                 },
             },
