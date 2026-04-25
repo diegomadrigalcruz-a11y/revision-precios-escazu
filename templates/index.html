@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisión de Precios — Art. 107 RLGCP</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --azul:   #1a4f8a;
+    --azul2:  #2563a8;
+    --verde:  #16a34a;
+    --rojo:   #dc2626;
+    --gris:   #f1f5f9;
+    --borde:  #cbd5e1;
+    --texto:  #1e293b;
+    --sub:    #64748b;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #e8edf5;
+    color: var(--texto);
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  header {
+    background: var(--azul);
+    color: #fff;
+    padding: 20px 28px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 700; }
+  header p  { font-size: 0.82rem; opacity: 0.8; margin-top: 4px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid var(--borde);
+    padding: 22px;
+  }
+  .card h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--sub);
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--borde);
+    padding-bottom: 10px;
+  }
+
+  .campo { margin-bottom: 14px; }
+  label  { display: block; font-size: 0.8rem; font-weight: 600; color: var(--sub); margin-bottom: 4px; }
+
+  input[type=number], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--texto);
+    background: var(--gris);
+    transition: border .15s;
+  }
+  input[type=number]:focus, select:focus {
+    outline: none;
+    border-color: var(--azul2);
+    background: #fff;
+  }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .pct-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .total-pct {
+    font-size: 0.78rem;
+    color: var(--sub);
+    margin-bottom: 14px;
+    padding: 6px 10px;
+    background: var(--gris);
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .total-pct span { font-weight: 700; }
+  .total-pct .ok  { color: var(--verde); }
+  .total-pct .err { color: var(--rojo); }
+
+  .btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    margin-top: 6px;
+  }
+  .btn:hover { background: var(--azul2); }
+  .btn:disabled { background: var(--sub); cursor: not-allowed; }
+
+  /* Resultados */
+  .resultado-vacio {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--sub);
+    font-size: 0.88rem;
+    text-align: center;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi {
+    background: var(--gris);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    border: 1px solid var(--borde);
+  }
+  .kpi .label { font-size: 0.72rem; color: var(--sub); font-weight: 600; text-transform: uppercase; }
+  .kpi .valor { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+  .kpi.procede   { border-color: var(--verde); background: #f0fdf4; }
+  .kpi.no-procede { border-color: var(--rojo); background: #fef2f2; }
+
+  .formula-box {
+    background: #f8fafc;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    margin-bottom: 20px;
+  }
+  .formula-box .titulo { font-family: 'Segoe UI', sans-serif; font-size: 0.75rem; font-weight: 700; color: var(--sub); margin-bottom: 8px; text-transform: uppercase; }
+  .formula-box .linea  { margin: 3px 0; }
+  .formula-box .resalt { color: var(--azul); font-weight: 700; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  th {
+    background: var(--azul);
+    color: #fff;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--borde);
+  }
+  tr:hover td { background: var(--gris); }
+  td.num { text-align: right; font-family: monospace; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .badge.verde { background: #dcfce7; color: var(--verde); }
+  .badge.rojo  { background: #fee2e2; color: var(--rojo); }
+
+  .loader {
+    display: none;
+    text-align: center;
+    padding: 40px;
+    color: var(--sub);
+    font-size: 0.88rem;
+  }
+  .spinner {
+    display: inline-block;
+    width: 28px; height: 28px;
+    border: 3px solid var(--borde);
+    border-top-color: var(--azul);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    margin-bottom: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .alerta { padding: 10px 14px; border-radius: 6px; font-size: 0.83rem; margin-bottom: 16px; }
+  .alerta.error { background: #fee2e2; color: var(--rojo); border: 1px solid #fca5a5; }
+  .alerta.info  { background: #eff6ff; color: var(--azul); border: 1px solid #bfdbfe; }
+
+  @media (max-width: 780px) {
+    .layout { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Respaldo Normativo ── */
+  .norma-section {
+    max-width: 1100px;
+    margin: 20px auto 0;
+  }
+  .norma-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #0f2d52;
+    color: #fff;
+    padding: 14px 22px;
+    border-radius: 10px 10px 0 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .norma-header .shield {
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .norma-header h3 { font-size: 0.95rem; font-weight: 700; flex: 1; }
+  .norma-header .badge-oficial {
+    background: #22c55e;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+  .norma-header .chevron {
+    font-size: 0.8rem;
+    transition: transform .25s;
+  }
+  .norma-header.open .chevron { transform: rotate(180deg); }
+
+  .norma-body {
+    display: none;
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 24px;
+  }
+  .norma-body.open { display: block; }
+
+  .norma-leyes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .ley-card {
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    padding: 14px 16px;
+    border-left: 4px solid var(--azul);
+  }
+  .ley-card .ley-num { font-size: 0.7rem; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: .05em; }
+  .ley-card .ley-nombre { font-size: 0.85rem; font-weight: 600; color: var(--texto); margin: 4px 0 2px; }
+  .ley-card .ley-desc { font-size: 0.75rem; color: var(--sub); line-height: 1.5; }
+
+  .norma-subtitulo {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--sub);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--borde);
+  }
+
+  .norma-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+  }
+  .norma-tabla th {
+    background: #f1f5f9;
+    color: var(--texto);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 8px 12px;
+    border: 1px solid var(--borde);
+    text-align: left;
+  }
+  .norma-tabla td {
+    padding: 8px 12px;
+    border: 1px solid var(--borde);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  .norma-tabla tr:hover td { background: #f8fafc; }
+  .norma-tabla .check { color: var(--verde); font-weight: 700; font-size: 1rem; }
+  .norma-tabla .art-pill {
+    display: inline-block;
+    background: #eff6ff;
+    color: var(--azul);
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .norma-nota {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.78rem;
+    color: #166534;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 4px;
+  }
+  .norma-nota .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+  .bccr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--sub);
+    margin-top: 8px;
+  }
+  .bccr-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--verde); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+</head>
+<body>
+
+<div style="max-width:1100px;margin:0 auto;">
+  <header>
+    <h1>Revisión de Precios — Contrato de Servicios / Suministros</h1>
+    <p>Arts. 102, 107, 108 y 109 RLGCP (Decreto N°43808-H) · Índices oficiales BCCR en tiempo real</p>
+  </header>
+
+  <div class="layout">
+    <!-- Panel izquierdo: formulario -->
+    <div>
+      <div class="card">
+        <h2>Datos del Contrato</h2>
+
+        <div class="campo">
+          <label>Precio de cotización (Pc) — ₡</label>
+          <input type="number" id="pc" min="0" step="0.01" placeholder="Ej: 150000.00">
+        </div>
+
+        <div class="row-2">
+          <div class="campo">
+            <label>Período de cotización</label>
+            <select id="periodo_cot"></select>
+          </div>
+          <div class="campo">
+            <label>Período de variación</label>
+            <select id="periodo_var"></select>
+          </div>
+        </div>
+
+        <h2 style="margin-top:8px">Estructura de Precio (%)</h2>
+
+        <div class="pct-group">
+          <div class="campo">
+            <label>Mano de obra (Mo) %</label>
+            <input type="number" id="mo" min="0" max="100" step="0.01" placeholder="45" oninput="actualizarTotal()">
+          </div>
+          <div class="campo">
+            <label>Insumos (I) %</label>
+            <input type="number" id="ins" min="0" max="100" step="0.01" placeholder="20" oninput="actualizarTotal()">
+          </div>
+          <div class="campo">
+            <label>Gastos Adm. (GA) %</label>
+            <input type="number" id="ga" min="0" max="100" step="0.01" placeholder="25" oninput="actualizarTotal()">
+          </div>
+          <div class="campo">
+            <label>Utilidad (U) % <em style="font-weight:400">[fijo]</em></label>
+            <input type="number" id="util" min="0" max="100" step="0.01" placeholder="10" oninput="actualizarTotal()">
+          </div>
+        </div>
+
+        <div class="total-pct">
+          <span>Total: <span id="total-pct-valor">0</span>%</span>
+          <span id="total-pct-estado" class="err">Debe sumar 100%</span>
+        </div>
+
+        <div class="campo">
+          <label>Índice de mano de obra</label>
+          <select id="indice_mo">
+            <option value="ismn">ISMN — Salarios Mínimos Nominales (1984=100)</option>
+          </select>
+        </div>
+
+        <button class="btn" id="btnCalcular" onclick="calcular()">Calcular revisión de precios</button>
+      </div>
+
+      <div class="card" style="margin-top:16px; font-size:0.78rem; color:var(--sub); line-height:1.6;">
+        <strong>Fuentes de índices (BCCR)</strong><br>
+        · Mano de obra: ISMN código 1076<br>
+        · Insumos: IPP-S código 42091<br>
+        · Gastos adm.: IPC junio 2015=100 código 25482<br>
+        · Utilidad: no sujeta a reajuste (Art. 102 RLGCP)
+      </div>
+    </div>
+
+    <!-- Panel derecho: resultados -->
+    <div>
+      <div class="card" id="panel-resultado">
+        <div class="resultado-vacio" id="vacio">
+          <div>Complete el formulario y presione<br><strong>Calcular revisión de precios</strong></div>
+        </div>
+
+        <div class="loader" id="loader">
+          <div class="spinner"></div><br>Consultando índices al BCCR…
+        </div>
+
+        <div id="resultado" style="display:none">
+          <div id="alerta-resultado"></div>
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="label">Precio cotización (Pc)</div>
+              <div class="valor" id="r-pc" style="color:var(--sub)">—</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Precio variado (Pv)</div>
+              <div class="valor" id="r-pv">—</div>
+            </div>
+            <div class="kpi" id="kpi-procede">
+              <div class="label">Variación</div>
+              <div class="valor" id="r-var">—</div>
+            </div>
+          </div>
+
+          <div class="formula-box">
+            <div class="titulo">Desarrollo de la fórmula</div>
+            <div class="linea">Pv = Pc × [ Mo×(iMOtm/iMOtc) + I×(ilti/iltc) + GA×(iGAtg/iGAtc) + U ]</div>
+            <div id="formula-desarrollo"></div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Componente</th>
+                <th>Índice utilizado</th>
+                <th>Valor cot.</th>
+                <th>Valor var.</th>
+                <th>Ratio</th>
+                <th>Factor</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-indices"></tbody>
+          </table>
+
+          <div style="margin-top:16px; padding:12px; background:var(--gris); border-radius:6px; font-size:0.8rem; color:var(--sub)">
+            <strong>Interpretación (Art. 107 RLGCP):</strong>
+            <span id="interpretacion"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Respaldo Normativo ── -->
+<div class="norma-section">
+  <div class="norma-header" onclick="toggleNorma(this)">
+    <div class="shield">⚖</div>
+    <h3>Respaldo Normativo — Validación legal del cálculo</h3>
+    <span class="badge-oficial">Verificado</span>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="norma-body">
+
+    <div class="norma-leyes">
+      <div class="ley-card">
+        <div class="ley-num">Ley N°9986</div>
+        <div class="ley-nombre">Ley General de Contratación Pública (LGCP)</div>
+        <div class="ley-desc">Art. 42 — Establece el derecho a la revisión de precios durante la ejecución de contratos públicos. Obliga a la Administración a reconocer variaciones de mercado verificadas con índices oficiales.</div>
+      </div>
+      <div class="ley-card">
+        <div class="ley-num">Decreto Ejecutivo N°43808-H</div>
+        <div class="ley-nombre">Reglamento a la LGCP (RLGCP)</div>
+        <div class="ley-desc">Arts. 102, 107, 108 y 109 — Define la fórmula polinómica, los índices aplicables por componente, el umbral mínimo del 5% y el procedimiento para presentar la gestión.</div>
+      </div>
+      <div class="ley-card">
+        <div class="ley-num">Banco Central de Costa Rica</div>
+        <div class="ley-nombre">Fuente oficial de índices (BCCR)</div>
+        <div class="ley-desc">El Art. 108 RLGCP exige que los índices sean los publicados oficialmente. El BCCR es la entidad rectora. Los datos se consultan en tiempo real vía el Servicio Web oficial del BCCR.</div>
+      </div>
+      <div class="ley-card">
+        <div class="ley-num">Contraloría General de la República</div>
+        <div class="ley-nombre">Criterio vinculante de aplicación</div>
+        <div class="ley-desc">La CGR ha reconocido la validez de la fórmula polinómica con ISMN, IPP-S e IPC como índices representativos para contratos de servicios y suministros no constructivos.</div>
+      </div>
+    </div>
+
+    <div class="norma-subtitulo">Mapa normativo — Elemento a artículo</div>
+    <table class="norma-tabla">
+      <thead>
+        <tr>
+          <th>Elemento del cálculo</th>
+          <th>Artículo</th>
+          <th>Descripción normativa</th>
+          <th>Índice aplicado</th>
+          <th>Fuente</th>
+          <th style="text-align:center">Cumple</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Fórmula polinómica<br>Pv = Pc × Σ(factor)</strong></td>
+          <td><span class="art-pill">Art. 102 RLGCP</span></td>
+          <td>Estructura base de la fórmula de revisión para contratos de servicios y suministros. Los componentes deben reflejar la estructura real del precio ofertado.</td>
+          <td>—</td>
+          <td>RLGCP</td>
+          <td style="text-align:center"><span class="check">✔</span></td>
+        </tr>
+        <tr>
+          <td><strong>Mano de obra (Mo)<br>iMOtm / iMOtc</strong></td>
+          <td><span class="art-pill">Art. 108 RLGCP</span></td>
+          <td>Índice de variación salarial publicado por el MTSS y consolidado en el BCCR. Refleja los decretos de salarios mínimos nominales aprobados semestralmente.</td>
+          <td>ISMN 1984=100<br><small style="color:#64748b">Código BCCR: 1076</small></td>
+          <td>BCCR Oficial</td>
+          <td style="text-align:center"><span class="check">✔</span></td>
+        </tr>
+        <tr>
+          <td><strong>Insumos (I)<br>ilti / iltc</strong></td>
+          <td><span class="art-pill">Art. 108 RLGCP</span></td>
+          <td>Índice de Precios al Productor del sector manufactura y servicios. Mide la variación en el costo de los insumos intermedios utilizados por el contratista.</td>
+          <td>IPP-S Manufactura<br><small style="color:#64748b">Código BCCR: 42091</small></td>
+          <td>BCCR Oficial</td>
+          <td style="text-align:center"><span class="check">✔</span></td>
+        </tr>
+        <tr>
+          <td><strong>Gastos administrativos (GA)<br>iGAtg / iGAtc</strong></td>
+          <td><span class="art-pill">Art. 108 RLGCP</span></td>
+          <td>Índice de Precios al Consumidor publicado por el INEC y consolidado en el BCCR. Representa la variación en los costos de gestión y administración general.</td>
+          <td>IPC junio 2015=100<br><small style="color:#64748b">Código BCCR: 25482</small></td>
+          <td>INEC / BCCR Oficial</td>
+          <td style="text-align:center"><span class="check">✔</span></td>
+        </tr>
+        <tr>
+          <td><strong>Utilidad (U)<br>Factor fijo</strong></td>
+          <td><span class="art-pill">Art. 102 RLGCP</span></td>
+          <td>La utilidad no está sujeta a reajuste. Se mantiene como factor constante igual al porcentaje declarado en la oferta original. No interviene en la variación de índices.</td>
+          <td>Constante (sin índice)</td>
+          <td>RLGCP</td>
+          <td style="text-align:center"><span class="check">✔</span></td>
+        </tr>
+        <tr>
+          <td><strong>Umbral de procedencia ≥ 5%</strong></td>
+          <td><span class="art-pill">Art. 107 RLGCP</span></td>
+          <td>Solo procede la revisión cuando la variación acumulada del precio es igual o superior al cinco por ciento (5%). Si no se alcanza, el resultado se documenta pero no genera ajuste.</td>
+          <td>—</td>
+          <td>RLGCP</td>
+          <td style="text-align:center"><span class="check">✔</span></td>
+        </tr>
+        <tr>
+          <td><strong>Períodos de referencia</strong></td>
+          <td><span class="art-pill">Art. 109 RLGCP</span></td>
+          <td>El período base (tc) es el mes de la oferta o del último reajuste. El período de variación (tm) es el mes en que se aplica la revisión solicitada.</td>
+          <td>—</td>
+          <td>RLGCP</td>
+          <td style="text-align:center"><span class="check">✔</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="norma-nota">
+      <span class="icon">🛡</span>
+      <div>
+        <strong>Los resultados de esta herramienta son reproducibles y auditables.</strong> Todos los valores de índice se obtienen en tiempo real del Servicio Web oficial del BCCR y quedan vinculados al período exacto seleccionado. La fórmula implementada es idéntica a la establecida en el Art. 102 RLGCP (Decreto N°43808-H). El cálculo puede ser verificado manualmente replicando las mismas consultas en el portal oficial del BCCR (<em>gee.bccr.fi.cr</em>).
+        <div class="bccr-badge"><span class="dot"></span> Datos en tiempo real — BCCR Servicio Web Oficial</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleNorma(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+</script>
+
+<script>
+const fmt = n => '₡' + Number(n).toLocaleString('es-CR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmtN = n => Number(n).toLocaleString('es-CR', {minimumFractionDigits: 4, maximumFractionDigits: 6});
+
+// Generar períodos desde 2020-01 hasta hoy
+function generarPeriodos() {
+  const ahora = new Date();
+  const periodos = [];
+  let d = new Date(2020, 0, 1);
+  while (d <= ahora) {
+    const p = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    periodos.push(p);
+    d.setMonth(d.getMonth() + 1);
+  }
+  return periodos.reverse();
+}
+
+function poblarSelects() {
+  const ps = generarPeriodos();
+  ['periodo_cot','periodo_var'].forEach(id => {
+    const sel = document.getElementById(id);
+    ps.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    });
+  });
+  // Defaults: cotización = 12 meses atrás, variación = mes más reciente
+  document.getElementById('periodo_cot').value = ps[12] || ps[ps.length-1];
+  document.getElementById('periodo_var').value = ps[1] || ps[0];
+}
+
+function actualizarTotal() {
+  const vals = ['mo','ins','ga','util'].map(id => parseFloat(document.getElementById(id).value) || 0);
+  const total = vals.reduce((a,b) => a+b, 0);
+  const el = document.getElementById('total-pct-valor');
+  const st = document.getElementById('total-pct-estado');
+  el.textContent = total.toFixed(2);
+  const ok = Math.abs(total - 100) < 0.01;
+  st.className = ok ? 'ok' : 'err';
+  st.textContent = ok ? '✓ Correcto' : 'Debe sumar 100%';
+  document.getElementById('btnCalcular').disabled = !ok;
+}
+
+async function calcular() {
+  const pc   = parseFloat(document.getElementById('pc').value);
+  const mo   = parseFloat(document.getElementById('mo').value)   / 100;
+  const ins  = parseFloat(document.getElementById('ins').value)  / 100;
+  const ga   = parseFloat(document.getElementById('ga').value)   / 100;
+  const util = (parseFloat(document.getElementById('util').value) || 0) / 100;
+  const pCot = document.getElementById('periodo_cot').value;
+  const pVar = document.getElementById('periodo_var').value;
+  const indMo = document.getElementById('indice_mo').value;
+
+  if (!pc || isNaN(pc)) { alert('Ingrese el precio de cotización.'); return; }
+
+  document.getElementById('vacio').style.display = 'none';
+  document.getElementById('resultado').style.display = 'none';
+  document.getElementById('loader').style.display = 'block';
+
+  try {
+    const resp = await fetch('/api/calcular', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        precio_cotizacion: pc,
+        mo, insumos: ins, ga, utilidad: util,
+        indice_mo: indMo,
+        periodo_cotizacion: pCot,
+        periodo_variacion: pVar
+      })
+    });
+
+    const data = await resp.json();
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('resultado').style.display = 'block';
+
+    if (!resp.ok || data.error) {
+      document.getElementById('alerta-resultado').innerHTML =
+        `<div class="alerta error">⚠ ${data.error}</div>`;
+      return;
+    }
+
+    document.getElementById('alerta-resultado').innerHTML = '';
+
+    // KPIs
+    document.getElementById('r-pc').textContent = fmt(data.precio_cotizacion);
+    document.getElementById('r-pv').textContent = fmt(data.precio_variado);
+    document.getElementById('r-pv').style.color  = data.variacion_absoluta >= 0 ? 'var(--verde)' : 'var(--rojo)';
+
+    const varPct = data.variacion_porcentual;
+    document.getElementById('r-var').textContent = (varPct >= 0 ? '+' : '') + varPct.toFixed(2) + '%';
+
+    const kpi = document.getElementById('kpi-procede');
+    kpi.className = 'kpi ' + (data.procede ? 'procede' : 'no-procede');
+    document.getElementById('r-var').style.color = data.procede ? 'var(--verde)' : 'var(--rojo)';
+
+    // Fórmula desarrollo
+    const f = data.factores;
+    const idx = data.indices;
+    document.getElementById('formula-desarrollo').innerHTML = `
+      <div class="linea" style="margin-top:8px">
+        Pv = ${fmt(data.precio_cotizacion)} × [
+          <span class="resalt">${fmtN(f.mo)}</span> +
+          <span class="resalt">${fmtN(f.ins)}</span> +
+          <span class="resalt">${fmtN(f.ga)}</span> +
+          <span class="resalt">${fmtN(f.u)}</span>
+        ]
+      </div>
+      <div class="linea">Pv = ${fmt(data.precio_cotizacion)} × <span class="resalt">${fmtN(f.suma)}</span></div>
+      <div class="linea">Pv = <span class="resalt">${fmt(data.precio_variado)}</span></div>
+    `;
+
+    // Tabla de índices
+    const filas = [
+      ['Mano de obra', idx.mano_de_obra],
+      ['Insumos (IPP-S)', idx.insumos],
+      ['Gastos Adm. (IPC)', idx.gastos_administrativos],
+    ];
+    const factoresArr = [f.mo, f.ins, f.ga];
+    document.getElementById('tabla-indices').innerHTML = filas.map(([nombre, d], i) => `
+      <tr>
+        <td>${nombre}</td>
+        <td style="font-size:0.75rem;color:var(--sub)">${d.nombre}</td>
+        <td class="num">${fmtN(d.cotizacion.valor)}<br><small style="color:var(--sub)">${d.cotizacion.periodo}</small></td>
+        <td class="num">${fmtN(d.variacion.valor)}<br><small style="color:var(--sub)">${d.variacion.periodo}</small></td>
+        <td class="num">${fmtN(d.ratio)}</td>
+        <td class="num"><strong>${fmtN(factoresArr[i])}</strong></td>
+      </tr>
+    `).join('') + `
+      <tr style="background:var(--gris)">
+        <td colspan="5" style="font-weight:700">Utilidad (no reajustable)</td>
+        <td class="num"><strong>${fmtN(f.u)}</strong></td>
+      </tr>
+    `;
+
+    // Interpretación
+    document.getElementById('interpretacion').innerHTML = data.procede
+      ? ` La variación de <strong>${varPct.toFixed(2)}%</strong> supera el umbral mínimo del 5% establecido en el Art. 107 RLGCP. <span class="badge verde">Revisión procedente</span>`
+      : ` La variación de <strong>${varPct.toFixed(2)}%</strong> no alcanza el umbral mínimo del 5% (Art. 107 RLGCP). <span class="badge rojo">Revisión no procede en este período</span>`;
+
+  } catch (e) {
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('resultado').style.display = 'block';
+    document.getElementById('alerta-resultado').innerHTML =
+      `<div class="alerta error">Error de conexión: ${e.message}</div>`;
+  }
+}
+
+actualizarTotal();
+poblarSelects();
+</script>
+</body>
+</html>
