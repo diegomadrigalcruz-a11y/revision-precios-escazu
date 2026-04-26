@@ -556,6 +556,14 @@
           </select>
         </div>
 
+        <div class="campo">
+          <label>Índice de gastos administrativos (IPC)</label>
+          <select id="indice_ga">
+            <option value="ipc">IPC base junio 2015=100 (código 25482)</option>
+            <option value="ipc20">IPC base diciembre 2020=100 (código 89635)</option>
+          </select>
+        </div>
+
         <button class="btn" id="btnCalcular" onclick="calcular()">Calcular revisión de precios</button>
       </div>
 
@@ -563,8 +571,11 @@
         <strong>Fuentes de índices (BCCR)</strong><br>
         · Mano de obra: ISMN código 1076<br>
         · Insumos: IPP-S código 42091<br>
-        · Gastos adm.: IPC junio 2015=100 código 25482<br>
-        · Utilidad: no sujeta a reajuste (Art. 102 RLGCP)
+        · Gastos adm.: IPC según selección (código 25482 ó 89635)<br>
+        · Utilidad: no sujeta a reajuste (Art. 43 LGCP)<br>
+        <div style="margin-top:8px; padding:6px 10px; background:#fffbeb; border-left:3px solid #f59e0b; border-radius:0 4px 4px 0; color:#92400e;">
+          <strong>Nota (Decreto 44937):</strong> Los índices preseleccionados son los típicos para servicios y suministros. Verifique que coincidan con los declarados en el cartel y la oferta del contrato específico.
+        </div>
       </div>
     </div>
 
@@ -663,6 +674,11 @@
         <div class="ley-desc">El Art. 108 RLGCP exige que los índices sean los publicados oficialmente. El BCCR es la entidad rectora. Los datos se consultan en tiempo real vía el Servicio Web oficial del BCCR.</div>
       </div>
       <div class="ley-card">
+        <div class="ley-num">Decreto Ejecutivo N°44937-H-MICITT-MIDEPLAN</div>
+        <div class="ley-nombre">Reglamento Operativo de Revisión de Precios (vigente agosto 2025)</div>
+        <div class="ley-desc">Operativiza los arts. 107–109 RLGCP. Exige que los oferentes declaren en su oferta los índices específicos a aplicar por componente. La herramienta permite seleccionar el IPC base (2015 ó 2020) para respetar lo pactado en cada cartel.</div>
+      </div>
+      <div class="ley-card">
         <div class="ley-num">Contraloría General de la República</div>
         <div class="ley-nombre">Criterio vinculante de aplicación</div>
         <div class="ley-desc">La CGR ha reconocido la validez de la fórmula polinómica con ISMN, IPP-S e IPC como índices representativos para contratos de servicios y suministros no constructivos.</div>
@@ -716,8 +732,8 @@
         </tr>
         <tr>
           <td><strong>Utilidad (U)<br>Factor fijo</strong></td>
-          <td><span class="art-pill">Art. 102 RLGCP</span></td>
-          <td>La utilidad no está sujeta a reajuste. Se mantiene como factor constante igual al porcentaje declarado en la oferta original. No interviene en la variación de índices.</td>
+          <td><span class="art-pill">Art. 43 LGCP</span></td>
+          <td>La utilidad no está sujeta a reajuste (Art. 43 LGCP). Se mantiene como factor constante igual al porcentaje declarado en la oferta original. No interviene en la variación de índices.</td>
           <td>Constante (sin índice)</td>
           <td>RLGCP</td>
           <td style="text-align:center"><span class="check">✔</span></td>
@@ -924,6 +940,7 @@ async function calcular() {
   const pCot = document.getElementById('periodo_cot').value;
   const pVar = document.getElementById('periodo_var').value;
   const indMo = document.getElementById('indice_mo').value;
+  const indGa = document.getElementById('indice_ga').value;
 
   if (!pc || isNaN(pc)) { alert('Ingrese el precio de cotización.'); return; }
 
@@ -940,6 +957,7 @@ async function calcular() {
         precio_cotizacion: pc,
         mo, insumos: ins, ga, utilidad: util,
         indice_mo: indMo,
+        indice_ga: indGa,
         periodo_cotizacion: pCot,
         periodo_variacion: pVar
       })

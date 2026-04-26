@@ -144,13 +144,14 @@ def api_calcular():
         p_cot  = data['periodo_cotizacion']
         p_var  = data['periodo_variacion']
         ind_mo = data.get('indice_mo', 'ismn')
+        ind_ga = data.get('indice_ga', 'ipc')
 
         if abs(mo + ins + ga + util - 1.0) > 0.0001:
             return jsonify({'error': 'Los porcentajes Mo + I + GA + U deben sumar 100%'}), 400
 
         cod_mo  = INDICES[ind_mo]['codigo']
         cod_ins = INDICES['ipp']['codigo']
-        cod_ga  = INDICES['ipc']['codigo']
+        cod_ga  = INDICES.get(ind_ga, INDICES['ipc'])['codigo']
 
         iMOtc, rMOtc = obtener_valor_indice(cod_mo, p_cot)
         iMOtm, rMOtm = obtener_valor_indice(cod_mo, p_var)
@@ -201,7 +202,7 @@ def api_calcular():
                     'ratio': round(ilti / iltc, 6),
                 },
                 'gastos_administrativos': {
-                    'nombre': INDICES['ipc']['nombre'],
+                    'nombre': INDICES.get(ind_ga, INDICES['ipc'])['nombre'],
                     'cotizacion': {'periodo': rGAtc, 'valor': round(iGAtc, 6)},
                     'variacion':  {'periodo': rGAtg, 'valor': round(iGAtg, 6)},
                     'ratio': round(iGAtg / iGAtc, 6),
