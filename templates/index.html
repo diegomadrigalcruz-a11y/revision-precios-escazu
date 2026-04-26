@@ -124,23 +124,23 @@
   .btn:disabled { background: var(--sub); cursor: not-allowed; }
 
   /* Botón PDF */
-  .btn-pdf {
-    display: none;
+  .btn-export-group { display: none; align-items: center; gap: 8px; flex-shrink: 0; }
+  .btn-pdf, .btn-word {
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 9px 18px;
-    background: #fff;
-    color: var(--azul);
-    border: 1.5px solid var(--azul);
     border-radius: 7px;
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
     transition: all .15s;
     white-space: nowrap;
-    flex-shrink: 0;
   }
-  .btn-pdf:hover { background: var(--azul); color: #fff; }
+  .btn-pdf  { background: #fff; color: var(--azul); border: 1.5px solid var(--azul); }
+  .btn-pdf:hover  { background: var(--azul); color: #fff; }
+  .btn-word { background: #fff; color: #1d6f42; border: 1.5px solid #1d6f42; }
+  .btn-word:hover { background: #1d6f42; color: #fff; }
 
   /* Resultados */
   .resultado-vacio {
@@ -431,7 +431,7 @@
       border-radius: 6px;
       margin-bottom: 16px;
     }
-    .btn-pdf { display: none !important; }
+    .btn-export-group { display: none !important; }
 
     /* Ocultar formulario, mostrar solo resultados */
     #panel-form { display: none !important; }
@@ -490,9 +490,10 @@
       <h1>Revisión de Precios — Contrato de Servicios / Suministros</h1>
       <p>Arts. 102, 107, 108 y 109 RLGCP (Decreto N°43808-H) · Índices oficiales BCCR en tiempo real</p>
     </div>
-    <button class="btn-pdf" id="btnPdf" onclick="exportarPDF()">
-      ↓ Exportar PDF
-    </button>
+    <div class="btn-export-group" id="btnGroup">
+      <button class="btn-word" onclick="exportarWord()">↓ Word</button>
+      <button class="btn-pdf"  onclick="exportarPDF()">↓ PDF</button>
+    </div>
   </header>
 
   <!-- Solo visible en impresión -->
@@ -929,7 +930,7 @@ async function calcular() {
   document.getElementById('vacio').style.display = 'none';
   document.getElementById('resultado').style.display = 'none';
   document.getElementById('loader').style.display = 'block';
-  document.getElementById('btnPdf').style.display = 'none';
+  document.getElementById('btnGroup').style.display = 'none';
 
   try {
     const resp = await fetch('/api/calcular', {
@@ -1026,9 +1027,7 @@ async function calcular() {
       <div class="print-item"><strong>Fecha de cálculo</strong>${ahora}</div>
     `;
 
-    // Mostrar botón PDF
-    const btnPdf = document.getElementById('btnPdf');
-    btnPdf.style.display = 'inline-flex';
+    document.getElementById('btnGroup').style.display = 'flex';
 
   } catch (e) {
     document.getElementById('loader').style.display = 'none';
@@ -1040,6 +1039,82 @@ async function calcular() {
 
 function exportarPDF() {
   window.print();
+}
+
+function exportarWord() {
+  const ahora = new Date().toLocaleDateString('es-CR', {day:'2-digit', month:'long', year:'numeric'});
+  const pc  = document.getElementById('r-pc').textContent;
+  const pv  = document.getElementById('r-pv').textContent;
+  const varEl = document.getElementById('r-var').textContent;
+  const pCot = document.getElementById('periodo_cot').value;
+  const pVar = document.getElementById('periodo_var').value;
+  const interp = document.getElementById('interpretacion').innerText;
+
+  // Tabla de índices desde el DOM
+  const filasTbl = [...document.querySelectorAll('#tabla-indices tr')].map(tr =>
+    `<tr>${[...tr.querySelectorAll('td,th')].map(c => `<td style="border:1px solid #ccc;padding:6px 10px;font-size:11pt">${c.innerText.replace(/\n/g,' ')}</td>`).join('')}</tr>`
+  ).join('');
+
+  const formulaHtml = document.getElementById('formula-desarrollo').innerText
+    .split('\n').filter(l=>l.trim()).map(l=>`<p style="font-family:Consolas,monospace;font-size:10pt;margin:4px 0">${l.trim()}</p>`).join('');
+
+  const html = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1e293b; margin: 2cm; }
+  h1   { font-size: 16pt; color: #1a4f8a; margin-bottom: 4pt; }
+  h2   { font-size: 12pt; color: #1a4f8a; border-bottom: 1.5pt solid #1a4f8a; padding-bottom: 3pt; margin: 18pt 0 8pt; }
+  .kpi-row { display: flex; gap: 20pt; margin: 12pt 0; }
+  .kpi { border: 1pt solid #cbd5e1; border-radius: 6pt; padding: 10pt 16pt; min-width: 130pt; text-align: center; }
+  .kpi .label { font-size: 8pt; color: #64748b; text-transform: uppercase; letter-spacing: .5pt; }
+  .kpi .valor { font-size: 15pt; font-weight: bold; color: #1a4f8a; margin-top: 4pt; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8pt; }
+  th    { background: #1a4f8a; color: #fff; padding: 7pt 10pt; font-size: 10pt; text-align: left; border: 1px solid #1a4f8a; }
+  .footer { margin-top: 28pt; font-size: 9pt; color: #64748b; border-top: 1pt solid #e2e8f0; padding-top: 8pt; }
+</style>
+</head>
+<body>
+<h1>Revisión de Precios — Contrato de Servicios / Suministros</h1>
+<p style="font-size:9pt;color:#64748b">Arts. 102, 107, 108 y 109 RLGCP (Decreto N°43808-H) · Generado: ${ahora}</p>
+
+<h2>Datos del cálculo</h2>
+<div class="kpi-row">
+  <div class="kpi"><div class="label">Precio Cotización (Pc)</div><div class="valor">${pc}</div></div>
+  <div class="kpi"><div class="label">Precio Variado (Pv)</div><div class="valor">${pv}</div></div>
+  <div class="kpi"><div class="label">Variación</div><div class="valor">${varEl}</div></div>
+</div>
+<p><strong>Período de cotización:</strong> ${pCot} &nbsp;&nbsp; <strong>Período de variación:</strong> ${pVar}</p>
+
+<h2>Desarrollo de la fórmula</h2>
+${formulaHtml}
+
+<h2>Índices utilizados</h2>
+<table>
+  <tr>
+    <th>Componente</th><th>Índice</th><th>Valor cot.</th><th>Valor var.</th><th>Ratio</th><th>Factor</th>
+  </tr>
+  ${filasTbl}
+</table>
+
+<h2>Interpretación</h2>
+<p>${interp}</p>
+
+<div class="footer">
+  Revisión de Precios — Herramienta de Akademos Lab · Índices oficiales BCCR en tiempo real
+</div>
+</body></html>`;
+
+  const blob = new Blob(['﻿', html], {type: 'application/msword'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `revision-precios-${pCot}-${pVar}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 actualizarTotal();
